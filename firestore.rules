@@ -1,0 +1,38 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isUs() {
+      return request.auth != null &&
+             request.auth.uid in ["YOUR_UID", "HER_UID"];
+    }
+
+    match /quotes/{id} {
+      allow read: if isUs();
+      allow write: if request.auth.uid == "YOUR_UID";
+    }
+
+    match /gallery/{id} {
+      allow read: if isUs();
+      allow write: if request.auth.uid == "YOUR_UID";
+    }
+
+    match /hearts/{id} {
+      allow read:          if isUs();
+      allow create:        if isUs();
+      allow update, delete: if false;
+    }
+
+    match /plans/{id} {
+      allow read:         if isUs();
+      allow create, delete: if request.auth.uid == "YOUR_UID";
+      allow update:       if isUs() &&
+        request.resource.data.diff(resource.data)
+          .affectedKeys().hasOnly(["done","updatedBy","updatedAt"]);
+    }
+
+    match /users/{uid} {
+      allow read, write: if request.auth.uid == uid;
+    }
+  }
+}
