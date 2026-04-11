@@ -21,7 +21,7 @@ import { db, auth, messaging } from './config'
 // ─── YOUR VAPID KEY ──────────────────────────────────────
 const VAPID_KEY = 'BOR-NTVcmKvVjZOZEnzcEuYe7N03hamPrChvgh5xKF7CRC0vQYj2-75-4mMq1K4vJcq2YHko0azSTHEVgAIif4s'
 const NOTIFY_URL  = 'https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net/sendHeartNotification'
-export const HER_UID = '9eQ8hupeX6MpnPvBmPpy51ElyOJ3'
+export const HER_UID = 'jsLNMk8ngjhLBV1dDgtWiUCPBZD3'
 
 const FALLBACK = { text: 'You are my today and all of my tomorrows.', author: 'Leo Christopher' }
 
