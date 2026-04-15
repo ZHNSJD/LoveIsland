@@ -22,6 +22,7 @@ import { db, auth, messaging } from './config'
 const VAPID_KEY = 'BOR-NTVcmKvVjZOZEnzcEuYe7N03hamPrChvgh5xKF7CRC0vQYj2-75-4mMq1K4vJcq2YHko0azSTHEVgAIif4s'
 const NOTIFY_URL  = 'https://YOUR_REGION-YOUR_PROJECT.cloudfunctions.net/sendHeartNotification'
 export const HER_UID = 'jsLNMk8ngjhLBV1dDgtWiUCPBZD3'
+export const MY_UID = 'pua5QxmB3JafsQpZybe0cTxq3AU2';
 
 const FALLBACK = { text: 'You are my today and all of my tomorrows.', author: 'Leo Christopher' }
 
@@ -36,6 +37,13 @@ export async function getDailyQuote() {
   const idx   = seed % docs.length
   const data  = docs[idx].data()
   return { text: data.text, author: data.author }
+}
+
+// Fetch all quotes at once so we can cycle through them locally
+export async function getAllQuotes() {
+  const snap = await getDocs(collection(db, 'quotes'));
+  if (snap.empty) return [];
+  return snap.docs.map(d => d.data());
 }
 
 export async function addQuote({ text, author }) {
@@ -151,38 +159,47 @@ export async function addPlan({ title, category = 'Date Night', emoji = '✨' })
   })
 }
 
-// ─── V2 — User Presence (Mood + Status) ───
-export function subscribePresence(myUid, herUid, callback) {
-  let myData  = null
-  let herData = null
+export function subscribePresence(callback) {
+  const currentUid = auth.currentUser?.uid;
+  if (!currentUid) return () => {};
+
+  // Automatically figure out who the partner is!
+  const partnerUid = currentUid === MY_UID ? HER_UID : MY_UID;
+
+  let meData = { moodPercentage: 50, statusText: "Offline" };
+  let partnerData = { moodPercentage: 50, statusText: "Offline" };
 
   function emit() {
-    if (myData !== null && herData !== null) {
-      callback({ me: myData, her: herData })
+    if (typeof callback === 'function') {
+      callback({ me: meData, partner: partnerData });
     }
   }
 
-  const unsub1 = onSnapshot(doc(db, 'users', myUid), snap => {
-    myData = snap.exists() ? snap.data() : {}
-    emit()
-  })
 
-  const unsub2 = onSnapshot(doc(db, 'users', herUid), snap => {
-    herData = snap.exists() ? snap.data() : {}
-    emit()
-  })
+const unsubMe = onSnapshot(doc(db, 'users', currentUid), snap => {
+    if (snap.exists()) meData = snap.data();
+    emit();
+  });
 
-  return () => { unsub1(); unsub2() }
+
+const unsubPartner = onSnapshot(doc(db, 'users', partnerUid), snap => {
+    if (snap.exists()) partnerData = snap.data();
+    emit();
+  });
+
+return () => { unsubMe(); unsubPartner(); }
+
 }
 
 export async function updatePresence({ moodPercentage, statusText }) {
-  const uid = auth.currentUser?.uid
-  if (!uid) return
+  const uid = auth.currentUser?.uid;
+  if (!uid) return;
+  // Always updates the document of whoever is currently logged in
   await setDoc(doc(db, 'users', uid), {
     moodPercentage,
     statusText,
     presenceUpdatedAt: serverTimestamp(),
-  }, { merge: true })
+  }, { merge: true });
 }
 
 // ─── FCM — Push Notifications ───

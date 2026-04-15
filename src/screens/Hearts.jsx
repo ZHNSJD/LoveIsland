@@ -3,6 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Send, Clock, Sparkles } from 'lucide-react'
 import { sendHeart, subscribeHearts } from '../firebase/services'
 
+import { auth } from '../firebase/config'
+import { MY_UID } from '../firebase/services'
+
 export default function Hearts() {
   const [history, setHistory] = useState([])
   const [sending, setSending] = useState(null)
@@ -138,30 +141,40 @@ export default function Hearts() {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          {history.length > 0 ? history.map((item, i) => (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1 - (i * 0.25), y: 0 }} // Fades out older items automatically!
-              key={i}
-              style={{ 
-                padding: '14px 20px', 
-                background: 'var(--bg2)', 
-                borderRadius: '16px',
-                display: 'flex', 
-                justifyContent: 'space-between', 
-                alignItems: 'center',
-                border: '1px solid var(--border2)',
-              }}
-            >
-              <span style={{ fontSize: '13px', color: 'var(--text)' }}>
-                {item.type === 'thinking' ? '❤️ Thinking of you' : '✨ Miss you'}
-              </span>
-              <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>
-                {/* Fallback to 'Now' if Firebase hasn't generated the timestamp yet */}
-                {item.sentAt?.toDate ? new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: 'numeric' }).format(item.sentAt.toDate()) : 'Now'}
-              </span>
-            </motion.div>
-          )) : (
+          {history.length > 0 ? history.map((item, i) => {
+            // Check if the person logged in is the one who sent it
+            const isMe = item.sentBy === auth.currentUser?.uid;
+
+            return (
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1 - (i * 0.25), y: 0 }} // Fades out older items automatically!
+                key={i}
+                style={{ 
+                  padding: '14px 20px', 
+                  background: 'var(--bg2)', 
+                  borderRadius: '16px',
+                  display: 'flex', 
+                  justifyContent: 'space-between', 
+                  alignItems: 'center',
+                  border: '1px solid var(--border2)',
+                }}
+              >
+                <span style={{ fontSize: '13px', color: 'var(--text)' }}>
+                  {/* The Clean Label */}
+                  <span style={{ fontWeight: 600, opacity: 0.8, marginRight: '6px' }}>
+                    {isMe ? "You sent:" : "She sent:"}
+                  </span>
+                  {/* The Action */}
+                  {item.type === 'thinking' ? '❤️ Thinking of you' : '✨ Miss you'}
+                </span>
+                
+                <span style={{ fontSize: '11px', color: 'var(--text-dim)' }}>
+                  {item.sentAt?.toDate ? new Intl.DateTimeFormat('en-US', { hour: 'numeric', minute: 'numeric' }).format(item.sentAt.toDate()) : 'Now'}
+                </span>
+              </motion.div>
+            )
+          }) : (
             <div style={{ padding: '24px', textAlign: 'center', border: '1px dashed var(--border2)', borderRadius: '16px' }}>
               <span style={{ fontSize: '12px', color: 'var(--text-dim)' }}>No love sent yet today. Be the first!</span>
             </div>
